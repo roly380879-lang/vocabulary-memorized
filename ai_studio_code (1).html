@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Vocabulary Learning</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem; /* rounded-lg */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            padding: 2rem; /* p-8 */
+        }
+        .btn-primary {
+            @apply bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300;
+        }
+        .btn-secondary {
+            @apply bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-300;
+        }
+        .btn-danger {
+            @apply bg-red-500 text-white font-bold py-1 px-2 rounded-md text-sm hover:bg-red-600 transition duration-300;
+        }
+        .flashcard-container {
+            min-height: 12rem; /* ensure cards have consistent height */
+            perspective: 1000px;
+        }
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard-container.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; /* Safari */
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #e5e7eb; /* gray-200 */
+        }
+        .flashcard-back {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-6 shadow-md">
+        <div class="container mx-auto">
+            <h1 class="text-3xl font-bold text-center">Smart Vocabulary Learning</h1>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="container mx-auto py-10 px-4">
+
+        <!-- Vocabulary Management Interface -->
+        <div id="vocabManagementView" class="block">
+            <!-- Word Input Section -->
+            <section class="mb-10">
+                <div class="card bg-gradient-to-br from-blue-50 to-indigo-50">
+                    <h2 class="text-2xl font-semibold mb-6 text-blue-700">新增詞彙</h2>
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <input type="text" id="wordInput" placeholder="輸入單字，如：serendipity" class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="definitionInput" placeholder="輸入定義/例句 (選填)" class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="addWordBtn" class="btn-primary">新增單字</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vocabulary List (Word Bank) Section -->
+            <section class="mb-10">
+                <div class="card bg-gradient-to-br from-green-50 to-teal-50">
+                    <h2 class="text-2xl font-semibold mb-6 text-green-700">我的詞彙庫</h2>
+                    <div id="wordList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <p id="noWordsMessage" class="col-span-full text-center text-gray-500 italic">目前沒有單字，請新增！</p>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-4">
+                        <button id="clearAllWordsBtn" class="btn-danger hidden">清除所有單字</button>
+                        <button id="startReviewBtn" class="btn-primary">開始複習</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Review Interface -->
+        <div id="reviewView" class="hidden">
+            <section>
+                <div class="card bg-gradient-to-br from-purple-50 to-pink-50">
+                    <h2 class="text-2xl font-semibold mb-6 text-purple-700">詞彙複習</h2>
+
+                    <div class="flex justify-center space-x-4 mb-8">
+                        <button id="selectFlashcard" class="btn-primary">抽認卡模式</button>
+                        <button id="selectSpelling" class="btn-primary">拼寫模式</button>
+                        <button id="selectFillInBlank" class="btn-primary">填空模式</button>
+                    </div>
+
+                    <!-- Practice Area -->
+                    <div id="practiceArea" class="hidden">
+                        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8 min-h-[200px] flex flex-col justify-center items-center relative">
+                            <!-- Flashcard Mode UI -->
+                            <div id="flashcardMode" class="hidden w-full h-full flex flex-col justify-center items-center">
+                                <div class="flashcard-container w-full max-w-md h-48 mb-6 cursor-pointer" onclick="this.classList.toggle('flipped')">
+                                    <div class="flashcard-inner">
+                                        <div class="flashcard-front">
+                                            <p id="flashcardWord" class="text-4xl font-bold text-gray-800"></p>
+                                        </div>
+                                        <div class="flashcard-back">
+                                            <p id="flashcardDefinition" class="text-xl text-gray-600"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Spelling Mode UI -->
+                            <div id="spellingMode" class="hidden w-full max-w-md">
+                                <p id="spellingDefinition" class="text-xl mb-4 text-gray-700 text-center"></p>
+                                <input type="text" id="spellingInput" class="w-full p-3 border border-gray-300 rounded-lg text-center text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="輸入單字">
+                                <p id="spellingResult" class="text-center font-bold text-lg mb-4"></p>
+                            </div>
+
+                            <!-- Fill-in-the-blank Mode UI -->
+                            <div id="fillInBlankMode" class="hidden w-full max-w-xl">
+                                <p id="fillInBlankSentence" class="text-xl mb-4 text-gray-700 text-center"></p>
+                                <input type="text" id="fillInBlankInput" class="w-full p-3 border border-gray-300 rounded-lg text-center text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="填入單字">
+                                <p id="fillInBlankResult" class="text-center font-bold text-lg mb-4"></p>
+                            </div>
+
+                            <p id="noWordsForReview" class="text-center text-gray-500 italic hidden">目前沒有足夠的單字進行複習，請新增更多單字。</p>
+                        </div>
+
+                        <div id="reviewControls" class="flex justify-center space-x-4">
+                            <button id="markEasyBtn" class="btn-secondary">簡單</button>
+                            <button id="checkAnswerBtn" class="btn-primary hidden">檢查</button>
+                            <button id="nextWordBtn" class="btn-primary">下一個</button>
+                            <button id="markHardBtn" class="btn-secondary">困難</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 text-center">
+                        <button id="backToWordListBtn" class="btn-secondary">返回詞彙列表</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-6 mt-10">
+        <div class="container mx-auto text-center text-gray-400 text-sm">
+            <p>Built with ❤️ for learning</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- Data Structure ---
+        // words = [{ word: "example", definition: "a thing", lastReview: 0, interval: 1, difficulty: 0.5 }]
+        let words = [];
+        let currentReviewWordIndex = -1;
+        let reviewMode = ''; // 'flashcard', 'spelling', 'fillInBlank'
+        const REVIEW_EASY_MULTIPLIER = 2; // Increase interval by this factor
+        const REVIEW_HARD_MULTIPLIER = 0.5; // Decrease interval by this factor
+        let reviewWords = []; // Words for the current review session
+
+        // --- DOM Elements ---
+        const vocabManagementView = document.getElementById('vocabManagementView');
+        const reviewView = document.getElementById('reviewView');
+
+        // Vocab Management View Elements
+        const wordInput = document.getElementById('wordInput');
+        const definitionInput = document.getElementById('definitionInput');
+        const addWordBtn = document.getElementById('addWordBtn');
+        const wordList = document.getElementById('wordList');
+        const noWordsMessage = document.getElementById('noWordsMessage');
+        const clearAllWordsBtn = document.getElementById('clearAllWordsBtn');
+        const startReviewBtn = document.getElementById('startReviewBtn');
+
+        // Review View Elements
+        const practiceArea = document.getElementById('practiceArea');
+        const reviewControls = document.getElementById('reviewControls');
+        const noWordsForReview = document.getElementById('noWordsForReview');
+
+        const selectFlashcardBtn = document.getElementById('selectFlashcard');
+        const selectSpellingBtn = document.getElementById('selectSpelling');
+        const selectFillInBlankBtn = document.getElementById('selectFillInBlank');
+
+        const flashcardMode = document.getElementById('flashcardMode');
+        const flashcardWord = document.getElementById('flashcardWord');
+        const flashcardDefinition = document.getElementById('flashcardDefinition');
+
+        const spellingMode = document.getElementById('spellingMode');
+        const spellingDefinition = document.getElementById('spellingDefinition');
+        const spellingInput = document.getElementById('spellingInput');
+        const spellingResult = document.getElementById('spellingResult');
+
+        const fillInBlankMode = document.getElementById('fillInBlankMode');
+        const fillInBlankSentence = document.getElementById('fillInBlankSentence');
+        const fillInBlankInput = document.getElementById('fillInBlankInput');
+        const fillInBlankResult = document.getElementById('fillInBlankResult');
+
+        const markEasyBtn = document.getElementById('markEasyBtn');
+        const markHardBtn = document.getElementById('markHardBtn');
+        const nextWordBtn = document.getElementById('nextWordBtn');
+        const checkAnswerBtn = document.getElementById('checkAnswerBtn');
+        const backToWordListBtn = document.getElementById('backToWordListBtn');
+
+        // --- View Switching ---
+        function showView(viewId) {
+            vocabManagementView.classList.add('hidden');
+            reviewView.classList.add('hidden');
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        // --- LocalStorage Functions ---
+        function saveWords() {
+            localStorage.setItem('vocabWords', JSON.stringify(words));
+        }
+
+        function loadWords() {
+            const storedWords = localStorage.getItem('vocabWords');
+            if (storedWords) {
+                words = JSON.parse(storedWords);
+            }
+        }
+
+        // --- Word Management ---
+        function renderWordList() {
+            wordList.innerHTML = '';
+            if (words.length === 0) {
+                noWordsMessage.classList.remove('hidden');
+                clearAllWordsBtn.classList.add('hidden');
+                startReviewBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                startReviewBtn.disabled = true;
+                return;
+            } else {
+                noWordsMessage.classList.add('hidden');
+                clearAllWordsBtn.classList.remove('hidden');
+                startReviewBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                startReviewBtn.disabled = false;
+            }
+
+            words.forEach((wordObj, index) => {
+                const wordCard = document.createElement('div');
+                wordCard.className = 'bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-center';
+                wordCard.innerHTML = `
+                    <div>
+                        <p class="text-lg font-semibold text-gray-900">${wordObj.word}</p>
+                        <p class="text-sm text-gray-600">${wordObj.definition || '無定義'}</p>
+                    </div>
+                    <button class="btn-danger remove-word-btn" data-word="${wordObj.word}">移除</button>
+                `;
+                wordList.appendChild(wordCard);
+            });
+
+            document.querySelectorAll('.remove-word-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const wordToRemove = e.target.dataset.word;
+                    words = words.filter(wordObj => wordObj.word !== wordToRemove);
+                    saveWords();
+                    renderWordList();
+                };
+            });
+        }
+
+        function addWord() {
+            const word = wordInput.value.trim();
+            const definition = definitionInput.value.trim();
+
+            if (word) {
+                // Prevent duplicate words
+                if (words.some(w => w.word.toLowerCase() === word.toLowerCase())) {
+                    alert('這個單字已經在詞彙庫中了！');
+                    return;
+                }
+
+                words.push({
+                    word: word,
+                    definition: definition,
+                    lastReview: 0, // Timestamp of last review (ms)
+                    interval: 1, // Days until next review
+                    difficulty: 0.5 // Adjusts SRS logic, 0.5 is neutral
+                });
+                wordInput.value = '';
+                definitionInput.value = '';
+                saveWords();
+                renderWordList();
+            } else {
+                alert('請輸入一個單字！');
+            }
+        }
+
+        function clearAllWords() {
+            if (confirm('確定要清除所有單字嗎？此操作無法恢復。')) {
+                words = [];
+                saveWords();
+                renderWordList();
+                endReview(); // Ensure review mode is exited if words are cleared
+            }
+        }
+
+        // --- Review System Logic (Simplified SRS) ---
+
+        function getWordsForReview() {
+            const now = Date.now(); // Current timestamp in milliseconds
+            let dueWords = words
+                .filter(w => (now - w.lastReview) / (1000 * 60 * 60 * 24) >= w.interval);
+
+            // Prioritize "hard" words by duplicating them
+            let reviewPool = [...dueWords];
+            dueWords.forEach(w => {
+                // If difficulty is below 0.5 (harder), add it again to the pool
+                if (w.difficulty < 0.5) {
+                    reviewPool.push(w);
+                }
+            });
+
+            // If not enough words are due or hard, fill with some non-due words, prioritizing oldest reviewed
+            if (reviewPool.length < 5 && words.length > 0) {
+                const allWordsSorted = [...words].sort((a, b) => a.lastReview - b.lastReview);
+                for (let i = 0; i < allWordsSorted.length && reviewPool.length < Math.max(5, words.length); i++) {
+                    if (!reviewPool.includes(allWordsSorted[i])) { // Add if not already in pool
+                        reviewPool.push(allWordsSorted[i]);
+                    }
+                }
+            }
+
+            // Shuffle the review pool
+            for (let i = reviewPool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [reviewPool[i], reviewPool[j]] = [reviewPool[j], reviewPool[i]];
+            }
+            return reviewPool;
+        }
+
+
+        function initializeReviewSession(mode) {
+            reviewMode = mode;
+            reviewWords = getWordsForReview();
+            currentReviewWordIndex = -1;
+
+            if (reviewWords.length === 0) {
+                practiceArea.classList.remove('hidden');
+                noWordsForReview.classList.remove('hidden');
+                reviewControls.classList.add('hidden');
+                hideAllPracticeModes();
+                return;
+            }
+
+            practiceArea.classList.remove('hidden');
+            reviewControls.classList.remove('hidden');
+            noWordsForReview.classList.add('hidden');
+            nextReviewWord();
+        }
+
+        function hideAllPracticeModes() {
+            flashcardMode.classList.add('hidden');
+            spellingMode.classList.add('hidden');
+            fillInBlankMode.classList.add('hidden');
+            checkAnswerBtn.classList.add('hidden');
+            markEasyBtn.classList.remove('hidden');
+            markHardBtn.classList.remove('hidden');
+            nextWordBtn.classList.remove('hidden');
+            spellingResult.textContent = ''; // Clear results
+            fillInBlankResult.textContent = ''; // Clear results
+        }
+
+        function displayWordForReview() {
+            hideAllPracticeModes();
+            const wordObj = reviewWords[currentReviewWordIndex];
+
+            if (!wordObj) { // Should not happen if check for reviewWords.length > 0
+                alert('複習會話結束！');
+                backToWordListBtn.click(); // Go back to word list
+                return;
+            }
+
+            switch (reviewMode) {
+                case 'flashcard':
+                    flashcardMode.classList.remove('hidden');
+                    document.querySelector('.flashcard-container').classList.remove('flipped'); // Reset card flip
+                    flashcardWord.textContent = wordObj.word;
+                    flashcardDefinition.textContent = wordObj.definition || '無定義';
+                    break;
+                case 'spelling':
+                    spellingMode.classList.remove('hidden');
+                    spellingDefinition.textContent = wordObj.definition || '請拼寫此單字';
+                    spellingInput.value = '';
+                    spellingInput.focus();
+                    checkAnswerBtn.classList.remove('hidden');
+                    markEasyBtn.classList.add('hidden'); // Hide easy/hard during check phase
+                    markHardBtn.classList.add('hidden');
+                    nextWordBtn.classList.add('hidden');
+                    break;
+                case 'fillInBlank':
+                    fillInBlankMode.classList.remove('hidden');
+                    let sentence = wordObj.definition || `請在空白處填入 "${wordObj.word}"`;
+                    // Attempt to find and replace the word in a sentence for a better fill-in-the-blank
+                    const regex = new RegExp(`\\b${wordObj.word}\\b`, 'gi');
+                    if (regex.test(sentence)) {
+                         sentence = sentence.replace(regex, '______');
+                    } else {
+                        sentence = `句子：${sentence} (填入：______)`; // Fallback if word not found in definition
+                    }
+                    fillInBlankSentence.textContent = sentence;
+                    fillInBlankInput.value = '';
+                    fillInBlankInput.focus();
+                    checkAnswerBtn.classList.remove('hidden');
+                    markEasyBtn.classList.add('hidden');
+                    markHardBtn.classList.add('hidden');
+                    nextWordBtn.classList.add('hidden');
+                    break;
+            }
+        }
+
+        function nextReviewWord() {
+            currentReviewWordIndex++;
+            if (currentReviewWordIndex >= reviewWords.length) {
+                alert('恭喜！所有單字都已複習完畢！');
+                endReview();
+            } else {
+                displayWordForReview();
+            }
+        }
+
+        function checkAnswer() {
+            const wordObj = reviewWords[currentReviewWordIndex];
+            if (!wordObj) return;
+
+            let correct = false;
+            if (reviewMode === 'spelling') {
+                correct = spellingInput.value.trim().toLowerCase() === wordObj.word.toLowerCase();
+                spellingResult.textContent = correct ? '正確！' : `錯誤。正確答案是：${wordObj.word}`;
+                spellingResult.className = `text-center font-bold text-lg mb-4 ${correct ? 'text-green-600' : 'text-red-600'}`;
+            } else if (reviewMode === 'fillInBlank') {
+                correct = fillInBlankInput.value.trim().toLowerCase() === wordObj.word.toLowerCase();
+                fillInBlankResult.textContent = correct ? '正確！' : `錯誤。正確答案是：${wordObj.word}`;
+                fillInBlankResult.className = `text-center font-bold text-lg mb-4 ${correct ? 'text-green-600' : 'text-red-600'}`;
+            }
+
+            // Show easy/hard/next buttons after check for feedback
+            checkAnswerBtn.classList.add('hidden');
+            markEasyBtn.classList.remove('hidden');
+            markHardBtn.classList.remove('hidden');
+            nextWordBtn.classList.remove('hidden'); // Allow user to skip or mark
+        }
+
+        function recordReviewResult(isEasy) {
+            const wordObj = reviewWords[currentReviewWordIndex];
+            if (!wordObj) return;
+
+            // Find the original word in the 'words' array to update its properties
+            const originalWordIndex = words.findIndex(w => w.word === wordObj.word);
+            if (originalWordIndex !== -1) {
+                const originalWord = words[originalWordIndex];
+                originalWord.lastReview = Date.now();
+
+                if (isEasy) {
+                    originalWord.interval = Math.round(originalWord.interval * REVIEW_EASY_MULTIPLIER);
+                    originalWord.difficulty = Math.min(1, originalWord.difficulty + 0.1); // Move towards easier (max 1)
+                } else { // Marked as Hard
+                    originalWord.interval = Math.round(originalWord.interval * REVIEW_HARD_MULTIPLIER);
+                    originalWord.interval = Math.max(1, originalWord.interval); // Minimum interval is 1 day
+                    originalWord.difficulty = Math.max(0, originalWord.difficulty - 0.1); // Move towards harder (min 0)
+                }
+                saveWords();
+            }
+            nextReviewWord();
+        }
+
+        function endReview() {
+            practiceArea.classList.add('hidden');
+            reviewControls.classList.add('hidden');
+            hideAllPracticeModes();
+            currentReviewWordIndex = -1;
+            reviewWords = [];
+            reviewMode = '';
+        }
+
+        // --- Event Listeners ---
+        addWordBtn.addEventListener('click', addWord);
+        wordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addWord();
+        });
+        definitionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addWord();
+        });
+        clearAllWordsBtn.addEventListener('click', clearAllWords);
+
+        startReviewBtn.addEventListener('click', () => {
+            if (words.length > 0) {
+                showView('reviewView');
+                // Auto-select flashcard mode if no mode was previously selected
+                if (!reviewMode) {
+                    initializeReviewSession('flashcard');
+                } else {
+                    initializeReviewSession(reviewMode); // Re-initialize with last selected mode
+                }
+            } else {
+                alert('請先新增一些單字才能開始複習！');
+            }
+        });
+
+        selectFlashcardBtn.addEventListener('click', () => initializeReviewSession('flashcard'));
+        selectSpellingBtn.addEventListener('click', () => initializeReviewSession('spelling'));
+        selectFillInBlankBtn.addEventListener('click', () => initializeReviewSession('fillInBlank'));
+
+        markEasyBtn.addEventListener('click', () => recordReviewResult(true));
+        markHardBtn.addEventListener('click', () => recordReviewResult(false));
+        nextWordBtn.addEventListener('click', () => nextReviewWord());
+        checkAnswerBtn.addEventListener('click', checkAnswer);
+        backToWordListBtn.addEventListener('click', () => {
+            endReview(); // Reset review session
+            showView('vocabManagementView');
+            renderWordList(); // Ensure word list is up-to-date
+        });
+
+        spellingInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !checkAnswerBtn.classList.contains('hidden')) checkAnswer();
+        });
+        fillInBlankInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !checkAnswerBtn.classList.contains('hidden')) checkAnswer();
+        });
+
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadWords();
+            renderWordList();
+            showView('vocabManagementView'); // Start on the management page
+        });
+    </script>
+
+</body>
+</html>
