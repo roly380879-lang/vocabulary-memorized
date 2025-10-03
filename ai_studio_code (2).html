@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Vocabulary Learning</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Optional: Add custom styles if needed, though Tailwind should cover most. */
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold">Smart Vocabulary Learning</h1>
+            <nav>
+                <button id="homeNavBtn" class="bg-white text-purple-700 py-2 px-4 rounded-full shadow hover:bg-purple-100 transition duration-300">Home</button>
+                <button id="wordBankNavBtn" class="bg-white text-purple-700 py-2 px-4 rounded-full shadow ml-2 hover:bg-purple-100 transition duration-300">Word Bank</button>
+                <button id="reviewNavBtn" class="bg-white text-purple-700 py-2 px-4 rounded-full shadow ml-2 hover:bg-purple-100 transition duration-300">Start Review</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 md:p-8">
+
+        <!-- Home (Word Input Page) -->
+        <section id="homeView" class="view active bg-white p-6 rounded-lg shadow-xl max-w-2xl mx-auto">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Add New Word</h2>
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <input type="text" id="wordInput" placeholder="Enter a new word (e.g., 'Ephemeral')" class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+                <button id="saveWordBtn" class="bg-purple-600 text-white py-3 px-6 rounded-lg shadow hover:bg-purple-700 transition duration-300 transform hover:scale-105 font-semibold text-lg">Save Word</button>
+            </div>
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <button id="goToWordBankBtn" class="bg-indigo-600 text-white py-3 px-6 rounded-lg shadow hover:bg-indigo-700 transition duration-300 transform hover:scale-105 font-semibold text-lg">Go to Word Bank</button>
+                <button id="startReviewBtn" class="bg-green-600 text-white py-3 px-6 rounded-lg shadow hover:bg-green-700 transition duration-300 transform hover:scale-105 font-semibold text-lg">Start Review</button>
+            </div>
+            <p id="saveMessage" class="text-center mt-4 text-sm text-green-600 hidden">Word saved successfully!</p>
+        </section>
+
+        <!-- Word Bank -->
+        <section id="wordBankView" class="view bg-white p-6 rounded-lg shadow-xl max-w-2xl mx-auto">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Your Word Bank</h2>
+            <ul id="wordList" class="space-y-3">
+                <!-- Words will be dynamically loaded here -->
+                <li class="bg-gray-50 p-3 rounded-md flex justify-between items-center text-lg shadow-sm">
+                    <span>Example Word</span>
+                    <button class="text-red-500 hover:text-red-700 font-semibold text-sm">Delete</button>
+                </li>
+            </ul>
+            <div class="text-center mt-8">
+                <button id="backToHomeFromBankBtn" class="bg-gray-300 text-gray-800 py-3 px-6 rounded-lg shadow hover:bg-gray-400 transition duration-300 transform hover:scale-105 font-semibold text-lg">Back to Home</button>
+            </div>
+            <p id="emptyBankMessage" class="text-center mt-4 text-gray-500 hidden">Your word bank is empty. Add some words!</p>
+        </section>
+
+        <!-- Review Interface -->
+        <section id="reviewView" class="view bg-white p-6 rounded-lg shadow-xl max-w-2xl mx-auto">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Review Your Vocabulary</h2>
+
+            <!-- Review Card -->
+            <div id="reviewCard" class="bg-purple-50 p-8 rounded-lg shadow-inner text-center min-h-[250px] flex flex-col justify-center items-center relative">
+                <p id="reviewMode" class="absolute top-4 left-4 text-xs text-purple-400 uppercase font-semibold"></p>
+                <h3 id="currentWordDisplay" class="text-4xl font-extrabold text-purple-800 mb-4"></h3>
+                <p id="currentDefinitionDisplay" class="text-xl text-gray-700 italic mb-6"></p>
+                <div id="flashcardControls" class="flex flex-col gap-4">
+                    <button id="flipCardBtn" class="bg-purple-500 text-white py-3 px-6 rounded-lg shadow hover:bg-purple-600 transition duration-300 transform hover:scale-105 font-semibold text-lg">Flip Card</button>
+                </div>
+                <div id="spellingControls" class="flex flex-col gap-4 hidden w-full max-w-md">
+                    <input type="text" id="spellingInput" placeholder="Type the word here" class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+                    <button id="checkSpellingBtn" class="bg-blue-500 text-white py-3 px-6 rounded-lg shadow hover:bg-blue-600 transition duration-300 transform hover:scale-105 font-semibold text-lg">Check Word</button>
+                    <p id="spellingFeedback" class="text-lg font-semibold mt-2"></p>
+                </div>
+                <div id="fillInBlankControls" class="flex flex-col gap-4 hidden w-full max-w-md">
+                    <p id="sentenceDisplay" class="text-xl text-gray-700 italic mb-4"></p>
+                    <input type="text" id="blankInput" placeholder="Fill in the blank" class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+                    <button id="checkBlankBtn" class="bg-teal-500 text-white py-3 px-6 rounded-lg shadow hover:bg-teal-600 transition duration-300 transform hover:scale-105 font-semibold text-lg">Check Answer</button>
+                    <p id="blankFeedback" class="text-lg font-semibold mt-2"></p>
+                </div>
+            </div>
+
+            <div id="reviewNavigation" class="flex justify-center items-center gap-4 mt-8">
+                <button id="easyBtn" class="bg-green-500 text-white py-3 px-6 rounded-lg shadow hover:bg-green-600 transition duration-300 transform hover:scale-105 font-semibold text-lg">Easy</button>
+                <button id="hardBtn" class="bg-red-500 text-white py-3 px-6 rounded-lg shadow hover:bg-red-600 transition duration-300 transform hover:scale-105 font-semibold text-lg">Hard</button>
+                <button id="nextReviewWordBtn" class="bg-blue-500 text-white py-3 px-6 rounded-lg shadow hover:bg-blue-600 transition duration-300 transform hover:scale-105 font-semibold text-lg">Next Word</button>
+            </div>
+
+            <div class="text-center mt-8">
+                <button id="backToHomeFromReviewBtn" class="bg-gray-300 text-gray-800 py-3 px-6 rounded-lg shadow hover:bg-gray-400 transition duration-300 transform hover:scale-105 font-semibold text-lg">Back to Home</button>
+            </div>
+            <p id="reviewCompleteMessage" class="text-center mt-4 text-xl text-green-700 hidden">Review session complete!</p>
+            <p id="reviewEmptyMessage" class="text-center mt-4 text-xl text-gray-500 hidden">Your word bank is empty. Add words to start a review!</p>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-4 text-center mt-8">
+        <p class="text-sm">Built with ❤️ for learning</p>
+    </footer>
+
+    <script>
+        const VIEWS = {
+            HOME: 'homeView',
+            WORD_BANK: 'wordBankView',
+            REVIEW: 'reviewView'
+        };
+
+        let currentView = VIEWS.HOME;
+        let vocabulary = JSON.parse(localStorage.getItem('vocabulary')) || [];
+        let reviewWords = [];
+        let currentReviewIndex = 0;
+        let reviewMode = 'flashcard'; // 'flashcard', 'spelling', 'fill-in-the-blank'
+
+        // Elements
+        const homeView = document.getElementById(VIEWS.HOME);
+        const wordBankView = document.getElementById(VIEWS.WORD_BANK);
+        const reviewView = document.getElementById(VIEWS.REVIEW);
+
+        const wordInput = document.getElementById('wordInput');
+        const saveWordBtn = document.getElementById('saveWordBtn');
+        const saveMessage = document.getElementById('saveMessage');
+        const goToWordBankBtn = document.getElementById('goToWordBankBtn');
+        const startReviewBtn = document.getElementById('startReviewBtn');
+
+        const wordList = document.getElementById('wordList');
+        const backToHomeFromBankBtn = document.getElementById('backToHomeFromBankBtn');
+        const emptyBankMessage = document.getElementById('emptyBankMessage');
+
+        const reviewCard = document.getElementById('reviewCard');
+        const reviewModeDisplay = document.getElementById('reviewMode');
+        const currentWordDisplay = document.getElementById('currentWordDisplay');
+        const currentDefinitionDisplay = document.getElementById('currentDefinitionDisplay');
+        const flipCardBtn = document.getElementById('flipCardBtn');
+        const easyBtn = document.getElementById('easyBtn');
+        const hardBtn = document.getElementById('hardBtn');
+        const nextReviewWordBtn = document.getElementById('nextReviewWordBtn');
+        const backToHomeFromReviewBtn = document.getElementById('backToHomeFromReviewBtn');
+        const reviewCompleteMessage = document.getElementById('reviewCompleteMessage');
+        const reviewEmptyMessage = document.getElementById('reviewEmptyMessage');
+
+        const flashcardControls = document.getElementById('flashcardControls');
+        const spellingControls = document.getElementById('spellingControls');
+        const spellingInput = document.getElementById('spellingInput');
+        const checkSpellingBtn = document.getElementById('checkSpellingBtn');
+        const spellingFeedback = document.getElementById('spellingFeedback');
+        const fillInBlankControls = document.getElementById('fillInBlankControls');
+        const sentenceDisplay = document.getElementById('sentenceDisplay');
+        const blankInput = document.getElementById('blankInput');
+        const checkBlankBtn = document.getElementById('checkBlankBtn');
+        const blankFeedback = document.getElementById('blankFeedback');
+
+        // Navigation Buttons (Header)
+        const homeNavBtn = document.getElementById('homeNavBtn');
+        const wordBankNavBtn = document.getElementById('wordBankNavBtn');
+        const reviewNavBtn = document.getElementById('reviewNavBtn');
+
+        // --- Utility Functions ---
+        function saveVocabulary() {
+            localStorage.setItem('vocabulary', JSON.stringify(vocabulary));
+        }
+
+        // Simulates fetching definition and example (replace with actual API call)
+        async function getWordDetails(word) {
+            // Mock API call delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const definitions = {
+                "ephemeral": {
+                    definition: "lasting for a very short time.",
+                    example: "The ephemeral beauty of a sunset."
+                },
+                "ubiquitous": {
+                    definition: "present, appearing, or found everywhere.",
+                    example: "Coffee shops are ubiquitous in the city."
+                },
+                "serendipity": {
+                    definition: "the occurrence and development of events by chance in a happy or beneficial way.",
+                    example: "A fortunate stroke of serendipity led to their discovery."
+                },
+                "mellifluous": {
+                    definition: "sweet or musical; pleasant to hear.",
+                    example: "Her mellifluous voice captivated the audience."
+                },
+                "effervescent": {
+                    definition: "bubbly, lively, and enthusiastic.",
+                    example: "She has an effervescent personality that brightens any room."
+                }
+            };
+            return definitions[word.toLowerCase()] || {
+                definition: "No definition found. Please provide one manually or try another word.",
+                example: "No example found."
+            };
+        }
+
+        // --- View Management ---
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(view => {
+                view.classList.remove('active');
+            });
+            document.getElementById(viewId).classList.add('active');
+            currentView = viewId;
+
+            // Specific actions for views
+            if (viewId === VIEWS.WORD_BANK) {
+                renderWordBank();
+            } else if (viewId === VIEWS.REVIEW) {
+                startReviewSession();
+            }
+        }
+
+        // --- Home View Logic ---
+        saveWordBtn.addEventListener('click', async () => {
+            const word = wordInput.value.trim();
+            if (word) {
+                const details = await getWordDetails(word);
+                vocabulary.push({
+                    word: word,
+                    definition: details.definition,
+                    example: details.example,
+                    repetition: 0,
+                    interval: 1,
+                    easinessFactor: 2.5,
+                    nextReview: new Date()
+                });
+                saveVocabulary();
+                wordInput.value = '';
+                saveMessage.classList.remove('hidden');
+                setTimeout(() => saveMessage.classList.add('hidden'), 2000);
+            }
+        });
+
+        goToWordBankBtn.addEventListener('click', () => showView(VIEWS.WORD_BANK));
+        startReviewBtn.addEventListener('click', () => showView(VIEWS.REVIEW));
+
+        // --- Word Bank Logic ---
+        function renderWordBank() {
+            wordList.innerHTML = '';
+            if (vocabulary.length === 0) {
+                emptyBankMessage.classList.remove('hidden');
+            } else {
+                emptyBankMessage.classList.add('hidden');
+                vocabulary.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-gray-50 p-3 rounded-md flex justify-between items-center text-lg shadow-sm';
+                    li.innerHTML = `
+                        <span>${item.word} - <em>${item.definition}</em></span>
+                        <button class="delete-word-btn text-red-500 hover:text-red-700 font-semibold text-sm" data-index="${index}">Delete</button>
+                    `;
+                    wordList.appendChild(li);
+                });
+                document.querySelectorAll('.delete-word-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const indexToDelete = parseInt(event.target.dataset.index);
+                        vocabulary.splice(indexToDelete, 1);
+                        saveVocabulary();
+                        renderWordBank(); // Re-render the list
+                    });
+                });
+            }
+        }
+
+        backToHomeFromBankBtn.addEventListener('click', () => showView(VIEWS.HOME));
+
+        // --- Review Interface Logic ---
+        function calculateNextReview(word, quality) {
+            const now = new Date();
+            let easinessFactor = word.easinessFactor;
+            let interval = word.interval;
+
+            if (quality >= 3) { // Correct answer
+                if (word.repetition === 0) {
+                    interval = 1;
+                } else if (word.repetition === 1) {
+                    interval = 6;
+                } else {
+                    interval = Math.round(interval * easinessFactor);
+                }
+                word.repetition++;
+            } else { // Incorrect answer
+                word.repetition = 0;
+                interval = 1;
+            }
+
+            // Update easiness factor
+            easinessFactor = easinessFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+            if (easinessFactor < 1.3) easinessFactor = 1.3; // Minimum EF
+
+            word.easinessFactor = easinessFactor;
+            word.interval = interval;
+            word.nextReview = new Date(now.setDate(now.getDate() + interval));
+
+            return word;
+        }
+
+        function startReviewSession() {
+            reviewWords = vocabulary.filter(word => new Date(word.nextReview) <= new Date())
+                                    .sort((a, b) => a.nextReview - b.nextReview); // Sort by next review date
+            currentReviewIndex = 0;
+            reviewCompleteMessage.classList.add('hidden');
+            reviewEmptyMessage.classList.add('hidden');
+            reviewNavigation.classList.remove('hidden');
+            reviewCard.classList.remove('hidden');
+
+            if (reviewWords.length === 0) {
+                reviewEmptyMessage.classList.remove('hidden');
+                reviewNavigation.classList.add('hidden');
+                reviewCard.classList.add('hidden');
+            } else {
+                displayReviewWord();
+            }
+        }
+
+        function displayReviewWord() {
+            if (currentReviewIndex >= reviewWords.length) {
+                reviewCompleteMessage.classList.remove('hidden');
+                reviewCard.classList.add('hidden');
+                reviewNavigation.classList.add('hidden');
+                return;
+            }
+
+            const word = reviewWords[currentReviewIndex];
+            currentWordDisplay.textContent = word.word;
+            currentDefinitionDisplay.textContent = ''; // Clear definition initially
+            flipCardBtn.textContent = 'Flip Card'; // Reset button text
+
+            // Randomly pick a review mode
+            const modes = ['flashcard', 'spelling', 'fill-in-the-blank'];
+            reviewMode = modes[Math.floor(Math.random() * modes.length)];
+            reviewModeDisplay.textContent = `Mode: ${reviewMode.replace('-', ' ')}`;
+
+            // Hide all controls first
+            flashcardControls.classList.add('hidden');
+            spellingControls.classList.add('hidden');
+            fillInBlankControls.classList.add('hidden');
+            spellingFeedback.textContent = '';
+            blankFeedback.textContent = '';
+            spellingInput.value = '';
+            blankInput.value = '';
+
+            if (reviewMode === 'flashcard') {
+                flashcardControls.classList.remove('hidden');
+                currentDefinitionDisplay.textContent = ''; // Hide definition initially
+            } else if (reviewMode === 'spelling') {
+                spellingControls.classList.remove('hidden');
+                currentWordDisplay.textContent = ''; // Hide word
+                currentDefinitionDisplay.textContent = `${word.definition} (${word.example})`;
+            } else if (reviewMode === 'fill-in-the-blank') {
+                fillInBlankControls.classList.remove('hidden');
+                currentWordDisplay.textContent = ''; // Hide word
+                const blankSentence = word.example.replace(new RegExp(word.word, 'gi'), '_____');
+                sentenceDisplay.textContent = blankSentence;
+            }
+        }
+
+        flipCardBtn.addEventListener('click', () => {
+            const word = reviewWords[currentReviewIndex];
+            if (currentDefinitionDisplay.textContent === '') {
+                currentDefinitionDisplay.textContent = `${word.definition} (${word.example})`;
+                flipCardBtn.textContent = 'Hide Definition';
+            } else {
+                currentDefinitionDisplay.textContent = '';
+                flipCardBtn.textContent = 'Flip Card';
+            }
+        });
+
+        checkSpellingBtn.addEventListener('click', () => {
+            const word = reviewWords[currentReviewIndex];
+            if (spellingInput.value.trim().toLowerCase() === word.word.toLowerCase()) {
+                spellingFeedback.textContent = 'Correct!';
+                spellingFeedback.className = 'text-lg font-semibold mt-2 text-green-600';
+            } else {
+                spellingFeedback.textContent = `Incorrect. The word was: ${word.word}`;
+                spellingFeedback.className = 'text-lg font-semibold mt-2 text-red-600';
+            }
+        });
+
+        checkBlankBtn.addEventListener('click', () => {
+            const word = reviewWords[currentReviewIndex];
+            if (blankInput.value.trim().toLowerCase() === word.word.toLowerCase()) {
+                blankFeedback.textContent = 'Correct!';
+                blankFeedback.className = 'text-lg font-semibold mt-2 text-green-600';
+            } else {
+                blankFeedback.textContent = `Incorrect. The word was: ${word.word}`;
+                blankFeedback.className = 'text-lg font-semibold mt-2 text-red-600';
+            }
+        });
+
+        function handleReviewAnswer(quality) {
+            if (currentReviewIndex < reviewWords.length) {
+                const word = reviewWords[currentReviewIndex];
+                const updatedWord = calculateNextReview(word, quality);
+
+                // Update the original word in the vocabulary array
+                const originalIndex = vocabulary.findIndex(vWord => vWord.word === updatedWord.word);
+                if (originalIndex !== -1) {
+                    vocabulary[originalIndex] = updatedWord;
+                    saveVocabulary();
+                }
+
+                currentReviewIndex++;
+                displayReviewWord();
+            }
+        }
+
+        easyBtn.addEventListener('click', () => handleReviewAnswer(5)); // Quality 5 for Easy
+        hardBtn.addEventListener('click', () => handleReviewAnswer(1)); // Quality 1 for Hard
+        nextReviewWordBtn.addEventListener('click', () => handleReviewAnswer(3)); // Default Quality 3 for Next
+
+        backToHomeFromReviewBtn.addEventListener('click', () => showView(VIEWS.HOME));
+
+        // --- Header Navigation ---
+        homeNavBtn.addEventListener('click', () => showView(VIEWS.HOME));
+        wordBankNavBtn.addEventListener('click', () => showView(VIEWS.WORD_BANK));
+        reviewNavBtn.addEventListener('click', () => showView(VIEWS.REVIEW));
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            showView(VIEWS.HOME);
+        });
+    </script>
+</body>
+</html>
