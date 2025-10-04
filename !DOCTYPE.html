@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>智慧單字複習系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <style>
+    .card {
+      perspective: 1000px;
+    }
+    .card-inner {
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    .card-front, .card-back {
+      backface-visibility: hidden;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      padding: 1rem;
+    }
+    .card-back {
+      transform: rotateY(180deg);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <!-- 頁首 -->
+  <header class="bg-white shadow p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold">智慧單字複習系統</h1>
+    <div>
+      <span id="currentUser">帳號：未登入</span> |
+      <span id="currentDeck">單字庫：未選擇</span>
+    </div>
+  </header>
+
+  <!-- 主內容 -->
+  <main class="p-4 space-y-4">
+    <!-- 帳號與單字庫管理 -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="font-bold mb-2">帳號與單字庫管理</h2>
+      <input id="usernameInput" type="text" placeholder="輸入帳號名稱" class="border p-2 rounded w-full mb-2" />
+      <button onclick="login()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">登入</button>
+      <hr class="my-4" />
+      <input id="deckNameInput" type="text" placeholder="建立新單字庫" class="border p-2 rounded w-full mb-2" />
+      <button onclick="createDeck()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">建立單字庫</button>
+      <select id="deckSelector" class="mt-2 border p-2 rounded w-full" onchange="selectDeck(this.value)"></select>
+    </section>
+
+    <!-- 單字新增與搜尋 -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="font-bold mb-2">單字管理</h2>
+      <input id="wordInput" type="text" placeholder="英文單字" class="border p-2 rounded w-full mb-2" />
+      <input id="meaningInput" type="text" placeholder="中文解釋" class="border p-2 rounded w-full mb-2" />
+      <input id="noteInput" type="text" placeholder="補充說明" class="border p-2 rounded w-full mb-2" />
+      <button onclick="addWord()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">新增單字</button>
+      <input id="searchInput" type="text" placeholder="搜尋單字" class="border p-2 rounded w-full mt-4" oninput="searchWords()" />
+      <div id="wordList" class="mt-4 grid gap-2"></div>
+    </section>
+
+    <!-- Flashcard 模式 -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="font-bold mb-2">Flashcard 模式</h2>
+      <button onclick="startFlashcard()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">開始複習</button>
+      <div id="flashcardContainer" class="mt-4"></div>
+    </section>
+
+    <!-- OCR 掃描 -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="font-bold mb-2">OCR 掃描</h2>
+      <input type="file" accept="image/*" onchange="scanOCR(event)" class="mb-2" />
+      <button onclick="moveTempToDeck()" class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600">移入正式單字庫</button>
+      <div id="ocrResult" class="mt-2 text-sm text-gray-700"></div>
+    </section>
+  </main>
+
+  <!-- 頁尾 -->
+  <footer class="bg-white text-center p-4 mt-8 shadow">
+    用 ❤️ 打造，專為背單字
+  </footer>
+
+  <!-- manifest.json -->
+  <script type="application/json" id="manifest">
+  {
+    "name": "智慧單字複習系統",
+    "short_name": "單字複習",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "description": "一個智慧單字複習系統",
+    "icons": []
+  }
+  </script>
+
+  <!-- Service Worker 註冊 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(() => {
+        console.log('Service Worker 已註冊');
+      });
+    }
+  </script>
+
+  <!-- JavaScript 功能邏輯 -->
+  <script>
+    let currentUser = null;
+    let currentDeck = null;
+    let tempWords = [];
+
+    function login() {
+      const name = document.getElementById('usernameInput').value.trim();
+      if (!name) return alert('請輸入帳號名稱');
+      currentUser = name;
+      document.getElementById('currentUser').textContent = '帳號：' + name;
+      loadDecks();
+    }
+
+    function createDeck() {
+      const deckName = document.getElementById('deckNameInput').value.trim();
+      if (!deckName || !currentUser) return;
+      const decks = getUserData().decks || {};
+      decks[deckName] = [];
+      saveUserData({ decks });
+      loadDecks();
+    }
+
+    function loadDecks() {
+      const decks = getUserData().decks || {};
+      const selector = document.getElementById('deckSelector');
+      selector.innerHTML = '<option value="">選擇單字庫</option>';
+      Object.keys(decks).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        selector.appendChild(opt);
+      });
+    }
+
+    function selectDeck(name) {
+      currentDeck = name;
+      document.getElementById('currentDeck').textContent = '單字庫：' + name;
+      renderWords();
+    }
+
+    function getUserData() {
+      return JSON.parse(localStorage.getItem(currentUser) || '{}');
+    }
+
+    function saveUserData(data) {
+      localStorage.setItem(currentUser, JSON.stringify(data));
+    }
+
+    function addWord() {
+      const word = document.getElementById('wordInput').value.trim();
+      const meaning = document.getElementById('meaningInput').value.trim();
+      const note = document.getElementById('noteInput').value.trim();
+      if (!word || !currentDeck) return;
+      const data = getUserData();
+      const deck = data.decks[currentDeck] || [];
+      if (deck.find(w => w.word === word)) return alert('單字已存在');
+      deck.push({ word, meaning, note, level: 0 });
+      data.decks[currentDeck] = deck;
+      saveUserData(data);
+      renderWords();
+    }
+
+    function renderWords() {
+      const list = document.getElementById('wordList');
+      list.innerHTML = '';
+      const keyword = document.getElementById('searchInput').value.trim();
+      const deck = getUserData().decks[currentDeck] || [];
+      deck.filter(w => w.word.includes(keyword) || w.meaning.includes(keyword)).forEach(w => {
+        const color = ['red', 'orange', 'green'][w.level];
+        const div = document.createElement('div');
+        div.className = `p-2 rounded shadow bg-${color}-100 cursor-pointer`;
+        div.text
