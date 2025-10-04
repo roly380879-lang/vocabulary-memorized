@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocab Learner</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@2.1.0/dist/tesseract.min.js'></script>
+    <style>
+        /* Custom styles for video feed and canvas */
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px; /* Adjust as needed */
+            margin: 0 auto;
+        }
+        video {
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+        }
+        canvas {
+            display: none; /* Hidden by default */
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+    <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Vocab Learner</h1>
+        <span id="header-username" class="text-lg"></span>
+    </header>
+
+    <main class="container mx-auto mt-8 p-4">
+
+        <!-- Account Section -->
+        <section id="account-section" class="bg-white p-6 rounded-lg shadow-md mb-8 max-w-md mx-auto">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Account</h2>
+            <div id="login-register-form">
+                <div class="mb-4">
+                    <label for="username-input" class="block text-gray-700 text-sm font-bold mb-2">Username:</label>
+                    <input type="text" id="username-input" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter your username">
+                </div>
+                <div class="flex justify-between">
+                    <button id="login-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Login</button>
+                    <button id="register-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Register</button>
+                </div>
+            </div>
+            <div id="account-welcome" class="hidden text-center">
+                <p class="text-lg mb-4">Welcome, <span id="current-username" class="font-bold"></span>!</p>
+                <button id="logout-btn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Logout</button>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <nav id="main-nav" class="hidden bg-white p-4 rounded-lg shadow-md mb-8 flex flex-wrap justify-center gap-4">
+            <button id="nav-home" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Home</button>
+            <button id="nav-wordbank" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Word Bank</button>
+            <button id="nav-review" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Review</button>
+        </nav>
+
+        <!-- Home Section -->
+        <section id="home-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Add New Word</h2>
+            <div class="mb-4">
+                <label for="english-word-input" class="block text-gray-700 text-sm font-bold mb-2">English Word:</label>
+                <input type="text" id="english-word-input" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="e.g., Serendipity">
+            </div>
+            <div class="mb-4">
+                <label for="chinese-meaning-input" class="block text-gray-700 text-sm font-bold mb-2">Chinese Meaning:</label>
+                <input type="text" id="chinese-meaning-input" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="e.g., 意外发现珍宝的才能">
+            </div>
+            <div class="mb-4">
+                <label for="explanation-input" class="block text-gray-700 text-sm font-bold mb-2">Explanation:</label>
+                <textarea id="explanation-input" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="e.g., 指偶然中发现有价值或令人愉快的事物。"></textarea>
+            </div>
+            <button id="add-word-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Add Word</button>
+
+            <hr class="my-8">
+
+            <h2 class="text-2xl font-semibold mb-4">Scan Word from Camera</h2>
+            <button id="scan-word-btn" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4">Scan Word</button>
+            <div class="video-container">
+                <video id="video" autoplay class="hidden"></video>
+                <canvas id="canvas" class="hidden"></canvas>
+            </div>
+            <p id="scan-status" class="mt-4 text-center text-gray-700"></p>
+            <p id="ocr-result" class="mt-2 text-center text-green-700 font-semibold"></p>
+        </section>
+
+        <!-- Word Bank Section -->
+        <section id="wordbank-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Your Word Bank</h2>
+            <ul id="word-list" class="space-y-4">
+                <!-- Words will be dynamically added here -->
+            </ul>
+            <p id="empty-wordbank-message" class="text-gray-600 italic hidden">Your word bank is empty. Add some words!</p>
+        </section>
+
+        <!-- Review Section (Simplified Placeholder) -->
+        <section id="review-section" class="hidden bg-white p-6 rounded-lg shadow-md mb-8 max-w-lg mx-auto text-center">
+            <h2 class="text-2xl font-semibold mb-4">Review Your Vocabulary</h2>
+            <p class="text-gray-700 mb-4">This section is under construction. Future features include Flashcard, Spelling, and Fill-in-the-blank practice modes with SRS simulation.</p>
+            <button class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Start Review (Coming Soon!)</button>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-white p-4 mt-8 text-center">
+        <p>Built with ❤️ for learning</p>
+    </footer>
+
+    <script>
+        const LS_USERS_KEY = 'vocabLearnerUsers';
+        const LS_CURRENT_USER_KEY = 'vocabLearnerCurrentUser';
+        const LS_WORDS_PREFIX = 'vocabLearnerWords_';
+
+        // DOM Elements
+        const accountSection = document.getElementById('account-section');
+        const loginRegisterForm = document.getElementById('login-register-form');
+        const usernameInput = document.getElementById('username-input');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const accountWelcome = document.getElementById('account-welcome');
+        const currentUsernameSpan = document.getElementById('current-username');
+        const headerUsernameSpan = document.getElementById('header-username');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        const mainNav = document.getElementById('main-nav');
+        const navHome = document.getElementById('nav-home');
+        const navWordbank = document.getElementById('nav-wordbank');
+        const navReview = document.getElementById('nav-review');
+
+        const homeSection = document.getElementById('home-section');
+        const englishWordInput = document.getElementById('english-word-input');
+        const chineseMeaningInput = document.getElementById('chinese-meaning-input');
+        const explanationInput = document.getElementById('explanation-input');
+        const addWordBtn = document.getElementById('add-word-btn');
+        const scanWordBtn = document.getElementById('scan-word-btn');
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('canvas');
+        const scanStatusText = document.getElementById('scan-status');
+        const ocrResultText = document.getElementById('ocr-result');
+        let stream; // To hold the camera stream
+
+        const wordbankSection = document.getElementById('wordbank-section');
+        const wordList = document.getElementById('word-list');
+        const emptyWordbankMessage = document.getElementById('empty-wordbank-message');
+
+        const reviewSection = document.getElementById('review-section');
+
+        let currentUser = null; // Stores the currently logged-in user
+
+        // --- Utility Functions ---
+        function saveUsers(users) {
+            localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
+        }
+
+        function getUsers() {
+            return JSON.parse(localStorage.getItem(LS_USERS_KEY) || '{}');
+        }
+
+        function saveCurrentUser(username) {
+            localStorage.setItem(LS_CURRENT_USER_KEY, username);
+        }
+
+        function getCurrentUser() {
+            return localStorage.getItem(LS_CURRENT_USER_KEY);
+        }
+
+        function saveUserWords(username, words) {
+            localStorage.setItem(LS_WORDS_PREFIX + username, JSON.stringify(words));
+        }
+
+        function getUserWords(username) {
+            return JSON.parse(localStorage.getItem(LS_WORDS_PREFIX + username) || '[]');
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(sectionId).classList.remove('hidden');
+
+            // Hide video/canvas if not on home section
+            if (sectionId !== 'home-section') {
+                stopCamera();
+            }
+        }
+
+        function updateHeaderUsername() {
+            headerUsernameSpan.textContent = currentUser ? `Logged in as: ${currentUser}` : '';
+        }
+
+        // --- Account Management ---
+        function renderAccountState() {
+            currentUser = getCurrentUser();
+            updateHeaderUsername();
+
+            if (currentUser) {
+                loginRegisterForm.classList.add('hidden');
+                accountWelcome.classList.remove('hidden');
+                currentUsernameSpan.textContent = currentUser;
+                mainNav.classList.remove('hidden');
+                showSection('home-section'); // Go to home after login
+                renderWordBank(); // Update word bank
+            } else {
+                loginRegisterForm.classList.remove('hidden');
+                accountWelcome.classList.add('hidden');
+                mainNav.classList.add('hidden');
+                showSection('account-section');
+            }
+        }
+
+        loginBtn.addEventListener('click', () => {
+            const username = usernameInput.value.trim();
+            if (username) {
+                const users = getUsers();
+                if (users[username]) {
+                    saveCurrentUser(username);
+                    renderAccountState();
+                } else {
+                    alert('Username not found. Please register.');
+                }
+            } else {
+                alert('Please enter a username.');
+            }
+        });
+
+        registerBtn.addEventListener('click', () => {
+            const username = usernameInput.value.trim();
+            if (username) {
+                const users = getUsers();
+                if (users[username]) {
+                    alert('Username already exists. Please choose a different one or login.');
+                } else {
+                    users[username] = { createdAt: new Date().toISOString() }; // Basic user data
+                    saveUsers(users);
+                    saveCurrentUser(username);
+                    alert('Registration successful! You are now logged in.');
+                    renderAccountState();
+                }
+            } else {
+                alert('Please enter a username.');
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.removeItem(LS_CURRENT_USER_KEY);
+                currentUser = null;
+                renderAccountState();
+            }
+        });
+
+        // --- Word Management ---
+        function renderWordBank() {
+            wordList.innerHTML = '';
+            if (!currentUser) {
+                emptyWordbankMessage.classList.remove('hidden');
+                return;
+            }
+
+            const words = getUserWords(currentUser);
+            if (words.length === 0) {
+                emptyWordbankMessage.classList.remove('hidden');
+            } else {
+                emptyWordbankMessage.classList.add('hidden');
+                words.forEach(word => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'bg-gray-50 p-4 rounded-lg shadow flex flex-col md:flex-row justify-between items-start md:items-center';
+                    listItem.innerHTML = `
+                        <div>
+                            <p class="text-xl font-bold text-blue-800">${word.english}</p>
+                            <p class="text-gray-700">${word.chinese}</p>
+                            <p class="text-gray-500 text-sm italic">${word.explanation}</p>
+                        </div>
+                        <button data-id="${word.id}" class="delete-word-btn bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm mt-2 md:mt-0">Delete</button>
+                    `;
+                    wordList.appendChild(listItem);
+                });
+
+                document.querySelectorAll('.delete-word-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const wordIdToDelete = event.target.dataset.id;
+                        deleteWord(wordIdToDelete);
+                    });
+                });
+            }
+        }
+
+        addWordBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                alert('Please log in to add words.');
+                return;
+            }
+
+            const english = englishWordInput.value.trim();
+            const chinese = chineseMeaningInput.value.trim();
+            const explanation = explanationInput.value.trim();
+
+            if (english && chinese) {
+                const words = getUserWords(currentUser);
+                const newWord = {
+                    id: Date.now().toString(), // Simple unique ID
+                    english,
+                    chinese,
+                    explanation,
+                    addedAt: new Date().toISOString()
+                };
+                words.push(newWord);
+                saveUserWords(currentUser, words);
+                renderWordBank();
+                alert('Word added successfully!');
+                englishWordInput.value = '';
+                chineseMeaningInput.value = '';
+                explanationInput.value = '';
+            } else {
+                alert('Please enter at least an English word and Chinese meaning.');
+            }
+        });
+
+        function deleteWord(id) {
+            if (!currentUser) return;
+            let words = getUserWords(currentUser);
+            words = words.filter(word => word.id !== id);
+            saveUserWords(currentUser, words);
+            renderWordBank();
+        }
+
+        // --- Navigation ---
+        navHome.addEventListener('click', () => showSection('home-section'));
+        navWordbank.addEventListener('click', () => {
+            showSection('wordbank-section');
+            renderWordBank(); // Ensure word bank is fresh when navigated to
+        });
+        navReview.addEventListener('click', () => showSection('review-section'));
+
+
+        // --- Camera Scanning (OCR) ---
+        async function startCamera() {
+            try {
+                scanStatusText.textContent = 'Requesting camera access...';
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                videoElement.srcObject = stream;
+                videoElement.classList.remove('hidden');
+                scanStatusText.textContent = 'Camera active. Position text in view.';
+                videoElement.play();
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                scanStatusText.textContent = 'Could not access camera. Please ensure permissions are granted.';
+                if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                    alert('Camera access denied. Please allow camera access in your browser settings to use this feature.');
+                } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+                    alert('No camera found on this device.');
+                }
+                stopCamera();
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+            }
+            videoElement.classList.add('hidden');
+            canvasElement.classList.add('hidden');
+            scanStatusText.textContent = '';
+            ocrResultText.textContent = '';
+        }
+
+        scanWordBtn.addEventListener('click', async () => {
+            if (!currentUser) {
+                alert('Please log in to scan words.');
+                return;
+            }
+
+            if (videoElement.classList.contains('hidden')) {
+                // If camera is not active, start it
+                await startCamera();
+                scanWordBtn.textContent = 'Capture & Scan';
+                ocrResultText.textContent = ''; // Clear previous results
+                scanStatusText.textContent = 'Camera active. Position text in view, then click "Capture & Scan"';
+            } else {
+                // If camera is active, capture and scan
+                scanStatusText.textContent = 'Capturing image and performing OCR...';
+                ocrResultText.textContent = '';
+                scanWordBtn.disabled = true; // Disable button during scan
+
+                const context = canvasElement.getContext('2d');
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+                context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                // canvasElement.classList.remove('hidden'); // Show captured image for debugging
+
+                stopCamera(); // Stop camera after capture
+                scanWordBtn.textContent = 'Scan Word'; // Reset button text
+
+                try {
+                    const { data: { text } } = await Tesseract.recognize(
+                        canvasElement,
+                        'eng', // English language model for OCR
+                        { logger: m => console.log(m) } // Optional logger for progress
+                    );
+
+                    const recognizedWord = text.split(/\s+/).find(word => word.trim().length > 0) || ''; // Take first non-empty word
+                    const cleanedWord = recognizedWord.replace(/[^a-zA-Z]/g, '').trim(); // Remove non-alphabetic chars
+
+                    if (cleanedWord) {
+                        const words = getUserWords(currentUser);
+                        const exists = words.some(word => word.english.toLowerCase() === cleanedWord.toLowerCase());
+
+                        if (exists) {
+                            ocrResultText.className = 'mt-2 text-center text-red-600 font-semibold';
+                            ocrResultText.textContent = `"${cleanedWord}" already exists in your word bank.`;
+                        } else {
+                            const newWord = {
+                                id: Date.now().toString(),
+                                english: cleanedWord,
+                                chinese: '【待补充】', // Placeholder
+                                explanation: '【待补充】', // Placeholder
+                                addedAt: new Date().toISOString()
+                            };
+                            words.push(newWord);
+                            saveUserWords(currentUser, words);
+                            renderWordBank();
+                            ocrResultText.className = 'mt-2 text-center text-green-600 font-semibold';
+                            ocrResultText.textContent = `"${cleanedWord}" added to your word bank! (Chinese meaning and explanation are placeholders.)`;
+                        }
+                    } else {
+                        ocrResultText.className = 'mt-2 text-center text-yellow-600 font-semibold';
+                        ocrResultText.textContent = 'No recognizable English word found.';
+                    }
+                } catch (ocrError) {
+                    console.error('OCR Error:', ocrError);
+                    scanStatusText.textContent = 'Error during OCR processing. Please try again.';
+                    ocrResultText.textContent = '';
+                } finally {
+                    scanWordBtn.disabled = false; // Re-enable button
+                }
+            }
+        });
+
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAccountState();
+        });
+    </script>
+</body>
+</html>
